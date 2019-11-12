@@ -1,7 +1,7 @@
 // HoiHD
 import React, { Fragment } from 'react';
 import { SafeAreaView } from 'react-native'
-import AppNotification from s'./src/Index/Index';
+import AppNotification from './src/Index/Index';
 const App = () => {
 	return (
 		<SafeAreaView style={{flex: 1}}>

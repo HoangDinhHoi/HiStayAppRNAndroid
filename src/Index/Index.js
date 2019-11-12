@@ -7,7 +7,8 @@ import firebase from 'react-native-firebase';
 import WebView from 'react-native-webview';
 import SplashScreen from 'react-native-splash-screen';
 import AsyncStorage from "@react-native-community/async-storage";
-// import Share from 'react-native-share';
+import Share from 'react-native-share';
+import shareImage from './Base64Image';
 let URL = "";
 export default class Index extends Component {
     constructor(props) {
@@ -52,7 +53,6 @@ export default class Index extends Component {
             if (firebase_token != async_firebase_token) {
                 this.storageFirebaseToken(firebase_token);
                 this.setState({
-                    // source: {...source, ...{method: "POST", body: 'firebase_token=' + firebase_token}},
                     method: "POST", body: 'firebase_token=' + firebase_token,
                     loading: false,
                 })
@@ -79,6 +79,7 @@ export default class Index extends Component {
                 URL = data.redirect;
             }
             this.displayNotification(title, body, notificationId);
+            console.log(notification);
         });
         this.notificationOpenedListener = firebase.notifications().onNotificationOpened((notificationOpen)=>{
             this.setState({loading: true});
@@ -114,7 +115,7 @@ export default class Index extends Component {
         const notificationShow = new firebase.notifications.Notification().
             setNotificationId(notificationId).
             setTitle(title).setBody(body);
-        notificationShow.android.setLargeIcon("https://app.histay.vn/public/project/crmapp/header/section/001/image/favicon.png");
+        notificationShow.android.setLargeIcon("ic_launcher");
         notificationShow.android.setChannelId(channel.channelId).android.setSmallIcon('ic_launcher');
         firebase.notifications().displayNotification(notificationShow);
     }
@@ -135,9 +136,38 @@ export default class Index extends Component {
         const {url} = newNavState;
         if (!url) return;
     }
+    // Chia sẻ dữ liệu đến app khác trong điện thoại
     nativeShare = async(data) => {
-        console.log(data);
-        await Share.open({url: data});
+        let dataJSON = null;
+        try {
+            dataJSON = JSON.parse(data)
+        } catch (error) {
+            console.log(error);
+        }   
+        if (dataJSON) {
+            let LIST_IMAGE = dataJSON['gallery'] || [];
+            let MESSAGE = dataJSON['content'] || "";
+            if (LIST_IMAGE.length > 1) {
+                Alert.alert(
+                    "Thông báo!",
+                    "Vui lòng lựa chọn dữ liệu để chia sẻ",
+                    [
+                        {"text": "Nội dung", onPress: ()=>{
+                            Share.open({
+                                title: "Chia sẻ dữ liệu",
+                                message: MESSAGE,
+                            }).then((res) => {console.log(res)}).catch((err) => {err && console.log(err)})
+                        }},
+                        {"text": "Ảnh", onPress: () => {
+                            shareImage(LIST_IMAGE, MESSAGE);
+                        }}
+                    ],
+                    {cancelable: true}
+                )
+            } else {
+                await shareImage(LIST_IMAGE, MESSAGE);
+            }
+        }
     }
     render() {
         if (this.state.loading) {
@@ -168,8 +198,9 @@ export default class Index extends Component {
                             body: this.state.body,
                         }}
                         onNavigationStateChange={this.handleWebViewNavigationStateChange}
-                        onMessage={event => {this.nativeShare(event.nativeEvent.data)}}
-                        
+                        onMessage={event => {
+                            this.nativeShare(event.nativeEvent.data)
+                        }} 
                     />
                 </View>
             </View>
